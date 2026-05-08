@@ -29,6 +29,8 @@ export const register = async (
         user
     });
 };
+
+
 export const login = async (
     req: Request,
     res: Response
@@ -75,15 +77,7 @@ export const login = async (
   
 };
 
-export const getUsers = async (
-    req: Request,
-    res: Response
-) => {
 
-    const users = await User.find();
-
-    res.json(users);
-};
 
 export const updateUser = async (
     req: Request,
@@ -109,4 +103,75 @@ export const deleteUser = async (
     res.json({
         message: "User deleted"
     });
+};
+
+
+export const getUsers = async (
+    req: Request,
+    res: Response
+) => {
+
+    const controller = new AbortController();
+
+    const signal = controller.signal;
+
+    req.on("close", () => {
+
+        console.log("❌ User cancelled request");
+
+        controller.abort();
+
+    });
+
+    try {
+
+        // Simulate delay
+        await delay(10000, signal);
+
+        // IMPORTANT
+        if (signal.aborted || req.destroyed) {
+
+            console.log("🛑 Request stopped");
+
+            return;
+        }
+
+        const users = await User.find();
+
+        console.log("✅ API Completed");
+
+        res.json(users);
+
+    } catch (error: any) {
+
+        console.log(error.message);
+
+    }
+
+};
+
+
+const delay = (
+    ms: number,
+    signal: AbortSignal
+) => {
+
+    return new Promise((resolve, reject) => {
+
+        const timeout = setTimeout(() => {
+
+            resolve(true);
+
+        }, ms);
+
+        signal.addEventListener("abort", () => {
+
+            clearTimeout(timeout);
+
+            reject(new Error("Request Cancelled"));
+
+        });
+
+    });
+
 };
